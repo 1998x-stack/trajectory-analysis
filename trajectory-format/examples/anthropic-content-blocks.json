@@ -1,0 +1,41 @@
+{
+  "model": "example-model",
+  "messages": [
+    {
+      "role": "user",
+      "content": "检查工作目录"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "toolu_pwd_1",
+          "name": "execute_shell",
+          "input": {
+            "command": "pwd"
+          }
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "toolu_pwd_1",
+          "content": "/workspace"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "当前目录是 /workspace。"
+        }
+      ]
+    }
+  ]
+}

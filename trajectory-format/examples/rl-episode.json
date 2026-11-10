@@ -1,0 +1,38 @@
+{
+  "schema_version": "example-rl-episode-0.1",
+  "episode_id": "episode-001",
+  "task": {
+    "instruction": "检查工作目录",
+    "environment": "mock-shell"
+  },
+  "transitions": [
+    {
+      "step": 0,
+      "observation": "用户要求检查目录",
+      "action": {
+        "tool": "execute_shell",
+        "arguments": {
+          "command": "pwd"
+        }
+      },
+      "next_observation": "/workspace",
+      "reward": 1,
+      "done": false
+    },
+    {
+      "step": 1,
+      "observation": "/workspace",
+      "action": {
+        "type": "final_answer",
+        "content": "当前目录是 /workspace。"
+      },
+      "next_observation": "任务完成",
+      "reward": 1,
+      "done": true
+    }
+  ],
+  "outcome": {
+    "success": true,
+    "total_reward": 2
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "model": "example-model",
+  "input": [
+    {
+      "role": "user",
+      "content": "检查工作目录"
+    },
+    {
+      "type": "function_call",
+      "call_id": "call_pwd_1",
+      "name": "execute_shell",
+      "arguments": "{\"command\":\"pwd\"}"
+    },
+    {
+      "type": "function_call_output",
+      "call_id": "call_pwd_1",
+      "output": "/workspace"
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+{"type":"session","harness":"my-agent","id":"demo-session-001","name":"检查工作目录"}
+{"type":"message","message":{"role":"user","content":"检查工作目录","timestamp":1794276000000}}
+{"type":"message","message":{"role":"assistant","content":"","toolCalls":[{"id":"call_pwd_1","function":{"name":"execute_shell","arguments":"{\"command\":\"pwd\"}"}}]}}
+{"type":"message","message":{"role":"tool","toolCallId":"call_pwd_1","content":"/workspace"}}
+{"type":"message","message":{"role":"assistant","content":"当前目录是 /workspace。"}}

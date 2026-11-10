@@ -1,0 +1,27 @@
+{
+  "note": "Illustrative logical span view; NOT raw OTLP JSON. OpenInference attributes on OTel spans.",
+  "trace_id": "0123456789abcdef0123456789abcdef",
+  "spans": [
+    {
+      "span_id": "0123456789abcdef",
+      "parent_span_id": null,
+      "name": "agent",
+      "attributes": {
+        "openinference.span.kind": "AGENT",
+        "input.value": "检查工作目录",
+        "output.value": "当前目录是 /workspace。"
+      }
+    },
+    {
+      "span_id": "fedcba9876543210",
+      "parent_span_id": "0123456789abcdef",
+      "name": "execute_shell",
+      "attributes": {
+        "openinference.span.kind": "TOOL",
+        "tool.name": "execute_shell",
+        "input.value": "{\"command\":\"pwd\"}",
+        "output.value": "/workspace"
+      }
+    }
+  ]
+}

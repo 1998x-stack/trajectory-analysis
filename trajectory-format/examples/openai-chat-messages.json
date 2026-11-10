@@ -1,0 +1,32 @@
+{
+  "model": "example-model",
+  "messages": [
+    {
+      "role": "user",
+      "content": "检查工作目录并报告路径"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_pwd_1",
+          "type": "function",
+          "function": {
+            "name": "execute_shell",
+            "arguments": "{\"command\":\"pwd\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_pwd_1",
+      "content": "/workspace"
+    },
+    {
+      "role": "assistant",
+      "content": "当前目录是 /workspace。"
+    }
+  ]
+}
