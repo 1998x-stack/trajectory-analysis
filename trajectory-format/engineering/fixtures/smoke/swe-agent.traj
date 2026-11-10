@@ -1,0 +1,30 @@
+{
+  "instance_id": "swe-smoke",
+  "info": {
+    "exit_status": "submitted"
+  },
+  "history": [
+    {
+      "role": "user",
+      "content": "Fix missing colon"
+    }
+  ],
+  "trajectory": [
+    {
+      "thought": "Find issue",
+      "response": "Find issue",
+      "action": "cat missing_colon.py",
+      "observation": "def f(x)\n  return x",
+      "state": {
+        "cwd": "/repo"
+      }
+    },
+    {
+      "thought": "Fix syntax",
+      "response": "Fix syntax",
+      "action": "sed -i 's/def f(x)/def f(x):/' missing_colon.py",
+      "observation": "",
+      "execution_time": 0.5
+    }
+  ]
+}

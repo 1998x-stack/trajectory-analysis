@@ -1,0 +1,4 @@
+{"type":"user","uuid":"cl-u1","parentUuid":null,"sessionId":"cc-smoke","timestamp":"2026-11-10T02:00:00Z","message":{"role":"user","content":"check the repo"},"cwd":"/private/project"}
+{"type":"assistant","uuid":"cl-a1","parentUuid":"cl-u1","sessionId":"cc-smoke","timestamp":"2026-11-10T02:00:01Z","message":{"role":"assistant","model":"example-model","usage":{"input_tokens":15,"output_tokens":9},"content":[{"type":"text","text":"Checking."},{"type":"tool_use","id":"toolu-1","name":"Bash","input":{"command":"pwd"}}]}}
+{"type":"user","uuid":"cl-u2","parentUuid":"cl-a1","sessionId":"cc-smoke","timestamp":"2026-11-10T02:00:02Z","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu-1","content":"/workspace"}]}}
+{"type":"assistant","uuid":"cl-a2","parentUuid":"cl-u2","sessionId":"cc-smoke","timestamp":"2026-11-10T02:00:03Z","message":{"role":"assistant","content":[{"type":"text","text":"Current directory is /workspace."}]}}

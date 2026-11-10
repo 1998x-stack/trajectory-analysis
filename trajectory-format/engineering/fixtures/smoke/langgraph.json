@@ -1,0 +1,59 @@
+{
+  "thread_id": "lg-smoke",
+  "history": [
+    {
+      "values": {
+        "value": 1,
+        "history": [
+          "incremented"
+        ]
+      },
+      "next": [],
+      "config": {
+        "configurable": {
+          "thread_id": "lg-smoke",
+          "checkpoint_id": "checkpoint-2"
+        }
+      },
+      "metadata": {
+        "step": 1,
+        "source": "loop"
+      },
+      "parent_config": {
+        "configurable": {
+          "thread_id": "lg-smoke",
+          "checkpoint_id": "checkpoint-1"
+        }
+      },
+      "created_at": "2026-11-10T02:00:02Z",
+      "tasks": []
+    },
+    {
+      "values": {
+        "value": 0,
+        "history": []
+      },
+      "next": [
+        "increment"
+      ],
+      "config": {
+        "configurable": {
+          "thread_id": "lg-smoke",
+          "checkpoint_id": "checkpoint-1"
+        }
+      },
+      "metadata": {
+        "step": 0,
+        "source": "input"
+      },
+      "parent_config": null,
+      "created_at": "2026-11-10T02:00:01Z",
+      "tasks": [
+        {
+          "name": "increment",
+          "id": "task-1"
+        }
+      ]
+    }
+  ]
+}
