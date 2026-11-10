@@ -66,3 +66,7 @@
 `mapped` / `omitted` 均按原始 JSON 的叶子字段路径计算。`mapped_leaf_ratio` = 已标记映射叶子数 /（已标记映射叶子数 + 未映射叶子数）。某些叶子被整体 Block 保留，而一些值被重新组织，因此该指标**既不是语义保真度，也不代表可重新生成完全一致的原生 JSON/JSONL**。
 
 已知边界：原始时间不全、独立并行工具执行、重试与版本变化、嵌套子 Agent、Environment Checkpoint、Span 关系需要进一步扩展。保留 Raw + SHA 后才能做可审计的转换复核。
+
+## SWE-agent Demonstration Export (history[] without trajectory[])
+
+公开的 `function_calling_simple.traj` 仅有 `history[]`。在这一形式下，`history[].role=assistant` 的 `tool_calls[].id` 表示真实的 Call ID，`history[].role=tool` 的 `tool_call_ids[]` 给出返回关联。Adapter 现在支持此形式并保留原生关联 ID；区别于有 `trajectory[]` 时合成的 `swe-step-N`。

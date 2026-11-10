@@ -1,0 +1,43 @@
+{
+  "history": [
+    {
+      "role": "system",
+      "content": "system instructions",
+      "agent": "main",
+      "message_type": "system_prompt"
+    },
+    {
+      "role": "user",
+      "content": "Repair issue",
+      "agent": "main",
+      "message_type": "observation"
+    },
+    {
+      "role": "assistant",
+      "content": "Run a check",
+      "thought": "Run a check",
+      "action": "pwd",
+      "agent": "main",
+      "message_type": "action",
+      "tool_calls": [
+        {
+          "type": "function",
+          "id": "hist-call-1",
+          "function": {
+            "name": "bash",
+            "arguments": "{\"command\":\"pwd\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "content": "/workspace",
+      "agent": "main",
+      "message_type": "observation",
+      "tool_call_ids": [
+        "hist-call-1"
+      ]
+    }
+  ]
+}

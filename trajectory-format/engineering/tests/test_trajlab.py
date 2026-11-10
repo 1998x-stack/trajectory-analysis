@@ -67,6 +67,14 @@ class AdapterTests(unittest.TestCase):
         self.assertEqual(["checkpoint-2", "checkpoint-1"], [
             e["payload"]["config"]["configurable"]["checkpoint_id"] for e in obj["events"]])
 
+    def test_swe_agent_history_only_demo_form(self):
+        path = FX / "swe-agent-history.traj"
+        self.assertEqual("swe-agent", detect(read_records(path)))
+        obj, report = convert(path)
+        self.assertEqual("hist-call-1", [e for e in obj["events"] if e["kind"] == "tool_call"][0]["call_id"])
+        self.assertEqual("hist-call-1", [e for e in obj["events"] if e["kind"] == "tool_result"][0]["call_id"])
+        self.assertFalse(any("unmatched" in w for w in report["warnings"]))
+
     def test_malformed_jsonl_has_line_number(self):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / "broken.jsonl"

@@ -73,6 +73,9 @@ def detect(raw):
         if "before" in raw or "after" in raw or "events" in raw:
             return "openhands"
         if "history" in raw and isinstance(raw["history"], list):
+            first = raw["history"][0] if raw["history"] else {}
+            if isinstance(first, dict) and first.get("role") in ("system", "user", "assistant", "tool"):
+                return "swe-agent"
             return "langgraph"
         if "values" in raw and "next" in raw:
             return "langgraph"
@@ -402,32 +405,89 @@ def langgraph(raw, source):
 
 
 def swe_agent(raw, source):
-    if not isinstance(raw, dict) or not isinstance(raw.get("trajectory"), list):
-        raise ValueError("SWE-agent expects .traj JSON with trajectory list")
+    if not isinstance(raw, dict):
+        raise ValueError("SWE-agent expects .traj JSON object")
+    steps = raw.get("trajectory")
+    history = raw.get("history")
+    if not isinstance(steps, list) and not isinstance(history, list):
+        raise ValueError("SWE-agent expects trajectory[] or history[]")
     sid = raw.get("instance_id", Path(source).stem)
     b = Builder("swe-agent", source, sid)
-    # Exclude the root 'history' from duplicate event counting; report this at root level.
-    if "history" in raw:
-        b.warnings.append("root.history intentionally not projected: often duplicates trajectory steps")
     if "info" in raw:
         b.warnings.append("root.info kept only in original .traj; no score inferred")
-    for i, step in enumerate(raw["trajectory"]):
-        if not isinstance(step, dict):
-            continue
-        if step.get("thought") is not None:
-            b.emit(i, step, "thought", "assistant", step.get("thought"),
-                   {"text": step.get("thought"), "response": step.get("response")},
-                   ["/thought", "/response"], step.get("timestamp"), pointer=f"/trajectory/{i}")
-        if step.get("action") is not None:
-            cid = f"swe-step-{i}"
-            b.emit(i, step, "tool_call", "agent", step["action"],
-                   {"name": "shell", "command": step["action"]}, ["/action"], step.get("timestamp"),
-                   cid, pointer=f"/trajectory/{i}")
-            if step.get("observation") is not None:
-                b.emit(i, step, "tool_result", "environment", step["observation"],
-                       {"content": step["observation"]}, ["/observation"], step.get("timestamp"),
+
+    if isinstance(steps, list):
+        if isinstance(history, list):
+            b.warnings.append("root.history not projected: may duplicate trajectory steps")
+        for i, step in enumerate(steps):
+            if not isinstance(step, dict):
+                continue
+            if step.get("thought") is not None:
+                b.emit(i, step, "thought", "assistant", step.get("thought"),
+                       {"text": step.get("thought"), "response": step.get("response")},
+                       ["/thought", "/response"], step.get("timestamp"), pointer=f"/trajectory/{i}")
+            if step.get("action") is not None:
+                cid = f"swe-step-{i}"
+                b.emit(i, step, "tool_call", "agent", step["action"],
+                       {"name": "shell", "command": step["action"]}, ["/action"], step.get("timestamp"),
                        cid, pointer=f"/trajectory/{i}")
-        b.mark(i, step, ["/timestamp"] if "timestamp" in step else [], f"/trajectory/{i}")
+                if step.get("observation") is not None:
+                    b.emit(i, step, "tool_result", "environment", step["observation"],
+                           {"content": step["observation"]}, ["/observation"], step.get("timestamp"),
+                           cid, pointer=f"/trajectory/{i}")
+            b.mark(i, step, ["/timestamp"] if "timestamp" in step else [], f"/trajectory/{i}")
+        return b
+
+    # SWE-agent demonstration exports can have history[] but no trajectory[].
+    # In this form assistant rows carry real tool_calls IDs, and tool rows
+    # carry the corresponding tool_call_ids. Preserve these IDs rather than
+    # synthesizing per-step IDs when they exist.
+    for i, row in enumerate(history):
+        if not isinstance(row, dict):
+            continue
+        role = row.get("role", "")
+        root_pointer = f"/history/{i}"
+        used = ["/role", "/message_type", "/agent"]
+        when = row.get("timestamp")
+        metadata = {"agent": row.get("agent"), "message_type": row.get("message_type")}
+        if role in ("system", "user"):
+            b.emit(i, row, "message", role, row.get("content", ""),
+                   {"content": row.get("content"), **metadata},
+                   used + ["/content"], when, pointer=root_pointer)
+        elif role == "assistant":
+            if "thought" in row:
+                b.emit(i, row, "thought", "assistant", row["thought"],
+                       {"text": row["thought"], "content": row.get("content"), **metadata},
+                       used + ["/thought", "/content"], when, pointer=root_pointer)
+            elif "content" in row:
+                b.emit(i, row, "message", "assistant", row["content"],
+                       {"content": row["content"], **metadata},
+                       used + ["/content"], when, pointer=root_pointer)
+            calls = row.get("tool_calls") or []
+            if calls:
+                for j, tool in enumerate(calls):
+                    fn = tool.get("function") or {}
+                    cid = tool.get("id", f"swe-history-{i}-{j}")
+                    b.emit(i, row, "tool_call", "agent", fn.get("name", row.get("action", "tool")),
+                           {"name": fn.get("name"), "arguments": fn.get("arguments"),
+                            "action": row.get("action"), "tool_call": tool, **metadata},
+                           used + [f"/tool_calls/{j}", "/action"], when, cid, pointer=root_pointer)
+            elif "action" in row:
+                cid = f"swe-history-{i}"
+                b.emit(i, row, "tool_call", "agent", row["action"],
+                       {"name": "shell", "command": row["action"], **metadata},
+                       used + ["/action"], when, cid, pointer=root_pointer)
+        elif role == "tool":
+            ids = row.get("tool_call_ids") or []
+            if not ids:
+                b.warnings.append("history row " + str(i) + ": tool result without tool_call_ids")
+            for cid in ids:
+                b.emit(i, row, "tool_result", "tool", row.get("content", ""),
+                       {"content": row.get("content"), **metadata},
+                       used + ["/content", "/tool_call_ids"], when, cid, pointer=root_pointer)
+        else:
+            b.mark(i, row, (), root_pointer)
+        b.mark(i, row, ["/timestamp"] if when else [], root_pointer)
     return b
 
 
