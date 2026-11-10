@@ -27,7 +27,7 @@ python3 -m http.server 8000
 
 ## 五种公开/真实运行样本
 
-样本真实性等级、链接和许可细节在 [docs/provenance.md](docs/provenance.md) 中。
+样本真实性等级、链接和许可细节在 [docs/provenance.md](docs/provenance.md) 中；**[公开来源实测转换与字段损失报告](docs/real-results-2026-11-10.md)**（GitHub Actions 双 Job 均成功）。
 
 ```bash
 cd trajectory-format/engineering
@@ -51,7 +51,7 @@ python3 trajlab.py batch \
 python3 -m http.server 8000
 ```
 
-**真实性边界：** Claude 样本是公开脱敏 Session；Codex 样本是公开原生 rollout；OpenHands 样本是使用 **mock LLM** 捕获的真实 Agent Server 集成测试事件，不是生产模型调用；SWE-agent 是公开演示轨迹；LangGraph 由本地实际图执行生成教程级 `StateSnapshot`。上述第三方文件未打包在仓库内，也未在当前提交中下载/实测。`fixtures/real/` 和 `demo/data/` 都已加入 Git 忽略。
+**真实性边界：** Claude 样本是公开脱敏 Session；Codex 样本是公开原生 rollout；OpenHands 样本是使用 **mock LLM** 捕获的真实 Agent Server 集成测试事件，不是生产模型调用；SWE-agent 是公开演示轨迹；LangGraph 由本地实际图执行生成教程级 `StateSnapshot`。上述第三方文件未打包在仓库内；GitHub Actions 已在一次性 Runner 中抓取并测试，运行后只保留聚合指标 Artifact，不提交原始数据。`fixtures/real/` 和 `demo/data/` 都已加入 Git 忽略。
 
 ## 单文件转换
 
