@@ -70,3 +70,7 @@
 ## SWE-agent Demonstration Export (history[] without trajectory[])
 
 公开的 `function_calling_simple.traj` 仅有 `history[]`。在这一形式下，`history[].role=assistant` 的 `tool_calls[].id` 表示真实的 Call ID，`history[].role=tool` 的 `tool_call_ids[]` 给出返回关联。Adapter 现在支持此形式并保留原生关联 ID；区别于有 `trajectory[]` 时合成的 `swe-step-N`。
+
+### OpenHands Socket Deltas（真实集成测试发现）
+
+对于不在 durable `event` 包装内的 `type=delta`，Converter 会把 `item_id`、`attempt`、`order`、`kind`、`content`、`chunk_id`、`choice_index` 保存在一个 `kind=state` 的事件 Payload 中，而不会猜测它一定是最终回答。`type=sync` 的 `from_seq` 作为 Metadata 保存。这里的流式增量不等于完整 LLM Message。

@@ -335,7 +335,20 @@ def openhands(raw, source):
         pre = "/event" if "event" in row else ""
         base = [pre + "/" + k for k in ("id", "timestamp", "source", "kind") if k in ev]
         base += ["/seq", "/type"] if "event" in row else []
-        if kind == "MessageEvent":
+        if row.get("type") == "delta":
+            # OpenHands socket captures can include per-token/per-chunk deltas
+            # outside the durable event envelope. Keep their ordering keys.
+            keys = ("type", "item_id", "attempt", "order", "kind",
+                    "content", "chunk_id", "choice_index")
+            b.emit(i, row, "state", "agent", row.get("content", ""),
+                   {k: row.get(k) for k in keys if k in row},
+                   ["/" + k for k in keys if k in row], t,
+                   source_id=row.get("item_id"), pointer=path)
+        elif row.get("type") == "sync":
+            b.emit(i, row, "metadata", "system", "socket sync",
+                   {"from_seq": row.get("from_seq")},
+                   ["/type", "/from_seq"], t, pointer=path)
+        elif kind == "MessageEvent":
             b.emit(i, row, "message",
                    "user" if ev.get("source") == "user" else "assistant",
                    ev.get("llm_message", ev.get("message", {})),

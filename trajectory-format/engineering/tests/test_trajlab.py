@@ -67,6 +67,18 @@ class AdapterTests(unittest.TestCase):
         self.assertEqual(["checkpoint-2", "checkpoint-1"], [
             e["payload"]["config"]["configurable"]["checkpoint_id"] for e in obj["events"]])
 
+    def test_openhands_socket_streaming_delta_fields(self):
+        rows = [{"type": "delta", "kind": "text", "content": "Let",
+                 "item_id": "oh-stream-1", "attempt": 1, "order": 0,
+                 "chunk_id": "cc-1", "choice_index": 0}]
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "openhands.json"
+            p.write_text(json.dumps({"before": rows, "after": []}))
+            obj, loss = convert(p, "openhands")
+            self.assertEqual("Let", obj["events"][0]["payload"]["content"])
+            self.assertEqual(0, loss["omitted_leaf_count"])
+            self.assertEqual(1, len(obj["events"]))
+
     def test_swe_agent_history_only_demo_form(self):
         path = FX / "swe-agent-history.traj"
         self.assertEqual("swe-agent", detect(read_records(path)))
