@@ -1,0 +1,29 @@
+name: Trajectory engineering validation
+
+on:
+  push:
+    paths:
+      - 'trajectory-format/engineering/**'
+      - '.github/workflows/trajectory-engineering.yml'
+  pull_request:
+    paths:
+      - 'trajectory-format/engineering/**'
+      - '.github/workflows/trajectory-engineering.yml'
+
+jobs:
+  adapters:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Offline adapter tests
+        run: python -m unittest discover -s trajectory-format/engineering/tests -v
+      - name: Existing examples validation
+        run: python trajectory-format/scripts/validate_examples.py
+      - name: Batch export for the viewer
+        run: |
+          cd trajectory-format/engineering
+          python trajlab.py batch fixtures/smoke/claude-code.jsonl fixtures/smoke/codex.jsonl fixtures/smoke/openhands.json fixtures/smoke/langgraph.json fixtures/smoke/swe-agent.traj --outdir /tmp/trajectory-demo
+          python -c "import json; p='/tmp/trajectory-demo/manifest.json'; assert len(json.load(open(p)))==5"
