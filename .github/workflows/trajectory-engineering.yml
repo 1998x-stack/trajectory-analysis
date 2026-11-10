@@ -27,3 +27,31 @@ jobs:
           cd trajectory-format/engineering
           python trajlab.py batch fixtures/smoke/claude-code.jsonl fixtures/smoke/codex.jsonl fixtures/smoke/openhands.json fixtures/smoke/langgraph.json fixtures/smoke/swe-agent.traj --outdir /tmp/trajectory-demo
           python -c "import json; p='/tmp/trajectory-demo/manifest.json'; assert len(json.load(open(p)))==5"
+
+  public-real-compatibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install real LangGraph runtime
+        run: python -m pip install langgraph
+      - name: Download public source traces without publishing their content
+        run: |
+          cd trajectory-format/engineering
+          python scripts/fetch_public.py --accept-source-terms
+      - name: Execute actual LangGraph graph and create history
+        run: |
+          cd trajectory-format/engineering
+          python scripts/generate_langgraph.py --output fixtures/real/langgraph.json
+      - name: Run native conversion and aggregate field-loss tests
+        run: |
+          cd trajectory-format/engineering
+          python scripts/check_real.py --input-dir fixtures/real --report /tmp/trajlab-real-summary.json
+      - name: Upload aggregate-only metrics (no source data)
+        uses: actions/upload-artifact@v4
+        with:
+          name: trajectory-public-real-summary
+          path: /tmp/trajlab-real-summary.json
