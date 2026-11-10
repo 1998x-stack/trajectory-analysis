@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Trajectory Lab · Agent Execution Viewer</title>
+<style>
+:root{--bg:#0b101a;--panel:#172232;--border:#2e4054;--fg:#e7eef8;--muted:#9db0c5;--blue:#7eb8fa;--green:#55cca1}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,sans-serif}
+header{padding:24px 30px;background:linear-gradient(100deg,#183251,var(--bg));border-bottom:1px solid var(--border)}
+h1{margin:0;font-size:24px}h2{font-size:15px;margin:0}p{margin:7px 0}.muted{color:var(--muted)}
+main{max-width:1500px;margin:auto;padding:20px}.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+.controls{display:flex;gap:8px;flex-wrap:wrap}input,select,button,.upload{background:var(--panel);border:1px solid var(--border);color:var(--fg);border-radius:8px;font:inherit;padding:8px 11px}
+button,.upload{cursor:pointer}.upload{color:var(--blue)}#file{display:none}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:20px 0}.kpi{padding:15px;background:var(--panel);border-radius:10px;border:1px solid var(--border)}.kpi strong{font-size:24px;display:block}
+.columns{display:grid;grid-template-columns:1.05fr 1fr;gap:15px}.panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.panelHead{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between}
+#timeline{max-height:700px;overflow:auto}.item{padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer}
+.item:hover,.item.active{background:#24394e}.item.active{border-left:3px solid var(--blue)}.item small{color:var(--muted);display:block;margin-top:4px}
+.pill{color:var(--blue);background:#25405c;border-radius:12px;padding:2px 8px;font-size:12px;margin-right:7px}
+.kind-tool_call{color:#ffd0a2;background:#553a30}.kind-tool_result{color:#94e7b9;background:#294b3c}.kind-error{color:#ff9aa3;background:#4d2c38}
+#detail,#loss{padding:16px}pre{font:12px/1.6 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere;max-height:370px;overflow:auto;background:#0b1520;border:1px solid var(--border);border-radius:8px;padding:12px}
+.barTrack{height:10px;border-radius:10px;background:#33445a;overflow:hidden;margin:8px 0}.fill{height:100%;background:var(--green)}
+.path{font-size:12px;color:var(--muted);overflow-wrap:anywhere}footer{color:var(--muted);padding:0 20px 28px}
+@media(max-width:850px){.columns{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}}
+</style></head><body>
+<header><h1>Trajectory Lab <span class="muted">/ Session Explorer</span></h1><p class="muted">Claude Code · Codex · OpenHands · LangGraph · SWE-agent → Canonical Events + Loss Audit</p></header>
+<main>
+<div class="bar"><div class="controls">
+<label class="upload" for="file">↑ 导入已转换 JSON</label><input type="file" id="file" accept=".json">
+<select id="dataset" aria-label="dataset"><option value="">Synthetic preview</option></select>
+</div><div class="controls">
+<select id="kind"><option value="">全部类型</option></select><select id="actor"><option value="">全部参与者</option></select>
+<input id="query" type="search" placeholder="搜索消息 / call_id"><button id="clear">清除</button>
+</div></div>
+<div class="kpis">
+<div class="kpi"><span class="muted">Format</span><strong id="format">—</strong></div>
+<div class="kpi"><span class="muted">Events</span><strong id="events">—</strong></div>
+<div class="kpi"><span class="muted">Calls / Results</span><strong id="calls">—</strong></div>
+<div class="kpi"><span class="muted">Mapped leaves</span><strong id="mapped">—</strong></div></div>
+<div class="columns">
+<section class="panel"><div class="panelHead"><h2>Event Timeline</h2><span id="shown" class="muted"></span></div><div id="timeline"></div></section>
+<section class="panel"><div class="panelHead"><h2>Event Detail</h2><span id="selected" class="muted">—</span></div><div id="detail"></div>
+<div class="panelHead"><h2>Field-loss Audit</h2><span class="muted">JSON Pointer</span></div><div id="loss"></div></section>
+</div></main>
+<footer>本地静态页面：浏览器导入不会发送数据到外部服务器。仅用于事件审查，不提供确定性重放。生产轨迹可能包含敏感信息，请脱敏。</footer>
+<script>
+"use strict";
+const $=id=>document.getElementById(id), elem=(tag,cls,txt)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(txt!==undefined)n.textContent=String(txt);return n;};
+const sample={trajectory:{source_format:"synthetic-preview",session_id:"preview",events:[
+{event_id:"ev-1",sequence:1,kind:"message",actor:"user",summary:"Check directory",payload:{text:"Check directory"}},
+{event_id:"ev-2",sequence:2,kind:"tool_call",actor:"agent",summary:"shell",call_id:"c1",payload:{command:"pwd"}},
+{event_id:"ev-3",sequence:3,kind:"tool_result",actor:"tool",summary:"/workspace",call_id:"c1",payload:{result:"/workspace"}},
+{event_id:"ev-4",sequence:4,kind:"message",actor:"assistant",summary:"Directory is /workspace",payload:{text:"Directory is /workspace"}}]},loss_report:null};
+let current=sample, choice=null, catalog=[];
+const all=()=>current.trajectory.events;
+function options(id,values,empty){const s=$(id),was=s.value;s.replaceChildren(new Option(empty,""));[...new Set(values)].sort().forEach(v=>s.add(new Option(v,v)));s.value=was;}
+function report(){
+const root=$("loss");root.replaceChildren();const r=current.loss_report;
+if(!r){root.append(elem("p","muted","需要 batch 导出文件才能查看字段损失报告。"));return;}
+const a=r.mapped_leaf_count||0,b=r.omitted_leaf_count||0,rate=a+b?a/(a+b):0;
+root.append(elem("p","",a+" mapped · "+b+" omitted · "+(rate*100).toFixed(1)+"% mapped"));
+const t=elem("div","barTrack"),f=elem("div","fill");f.style.width=(rate*100)+"%";t.append(f);root.append(t);
+root.append(elem("p","path","此比例仅表示显式映射的 JSON 叶子字段覆盖率，不代表语义无损性。"));
+(r.warnings||[]).forEach(w=>root.append(elem("p","path","⚠ "+w)));
+const missing=(r.records||[]).filter(x=>x.omitted?.length);
+if(missing.length){const d=elem("details");d.append(elem("summary","",missing.length+" 条记录存在遗漏字段"));
+d.append(elem("pre","",missing.map(x=>x.source_pointer+" → "+x.omitted.join(", ")).join("\n")));root.append(d);}
+}
+function detail(){
+const root=$("detail");root.replaceChildren();const e=all().find(x=>x.event_id===choice);
+$("selected").textContent=e?e.event_id:"—";
+if(!e){root.append(elem("p","muted","选择左侧事件查看完整 Payload、源指针、工具关联。"));return;}
+root.append(elem("h2","",e.summary));
+root.append(elem("p","path",e.actor+" · "+e.kind+" · "+(e.timestamp||"No timestamp")));
+if(e.call_id)root.append(elem("p","path","Tool correlation: "+e.call_id));
+if(e.parent_source_id)root.append(elem("p","path","Parent source: "+e.parent_source_id));
+root.append(elem("p","path","Source: "+(e.source?.pointer||"unknown")+" #"+(e.source?.record_index??"?")));
+root.append(elem("pre","",JSON.stringify(e.payload,null,2)));
+root.append(elem("p","path","SHA-256: "+(e.source?.sha256||"—")));
+}
+function render(){
+$("format").textContent=current.trajectory.source_format||"—";
+$("events").textContent=all().length;
+$("calls").textContent=all().filter(e=>e.kind==="tool_call").length+" / "+all().filter(e=>e.kind==="tool_result").length;
+$("mapped").textContent=current.loss_report?(current.loss_report.mapped_leaf_count||0):"n/a";
+options("kind",all().map(e=>e.kind),"全部类型");options("actor",all().map(e=>e.actor),"全部参与者");
+const k=$("kind").value,a=$("actor").value,q=$("query").value.toLowerCase();
+const shown=all().filter(e=>(!k||e.kind===k)&&(!a||e.actor===a)&&(!q||[e.summary,e.call_id,JSON.stringify(e.payload)].join(" ").toLowerCase().includes(q)));
+$("shown").textContent=shown.length+" / "+all().length;
+const list=$("timeline");list.replaceChildren();
+shown.forEach(e=>{const row=elem("div","item"+(choice===e.event_id?" active":""));
+const p=elem("p");p.append(elem("span","pill kind-"+e.kind,e.kind),elem("span","muted",e.actor+" #"+e.sequence));
+row.append(p,elem("div","",e.summary),elem("small","",(e.timestamp||"")+" "+(e.call_id?"↔ "+e.call_id:"")));
+row.addEventListener("click",()=>{choice=e.event_id;render();});list.append(row);});
+if(!shown.length)list.append(elem("p","muted","没有匹配的事件。"));detail();report();
+}
+function activate(data){const v=data.trajectory?data:{trajectory:data,loss_report:null};if(!Array.isArray(v.trajectory?.events))throw Error("Expected canonical trajectory.events");
+current=v;choice=null;$("query").value="";$("kind").value="";$("actor").value="";render();}
+["kind","actor","query"].forEach(id=>$(id).addEventListener("input",render));
+$("clear").addEventListener("click",()=>{$("kind").value="";$("actor").value="";$("query").value="";render();});
+$("file").addEventListener("change",async e=>{try{activate(JSON.parse(await e.target.files[0].text()));}catch(err){alert(err.message);}});
+$("dataset").addEventListener("change",async e=>{const o=catalog.find(x=>x.file===e.target.value);if(!o){activate(sample);return;}
+try{const r=await fetch("./data/"+encodeURIComponent(o.file));if(!r.ok)throw Error(r.status);activate(await r.json());}catch(err){alert(err.message);}});
+async function init(){render();try{const r=await fetch("./data/manifest.json");if(!r.ok)throw Error(r.status);catalog=await r.json();
+catalog.forEach(o=>$("dataset").add(new Option(o.name+" ("+o.events+")",o.file)));
+if(catalog.length){$("dataset").value=catalog[0].file;$("dataset").dispatchEvent(new Event("change"));}}catch(_){/* synthetic preview until batch */}}
+init();
+</script></body></html>
